@@ -428,7 +428,7 @@ async function boot(){
 // ═══ Polling: refresh live data every 60 seconds ═══
 // Binance is real-time. Yahoo indices delayed 10-15 min. Netlify proxy
 // has 60s server-side cache. AI brief re-streams every 5 min (expensive).
-var POLL_INTERVAL_MS=60*1000;
+var POLL_INTERVAL_MS=30*1000;
 var AI_BRIEF_INTERVAL_MS=5*60*1000;
 var lastAIBriefTime=0;
 
