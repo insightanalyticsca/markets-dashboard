@@ -425,7 +425,47 @@ async function boot(){
   fetchAIBrief();
 }
 
+// ═══ Polling: refresh live data every 60 seconds ═══
+// Binance is real-time. Yahoo indices delayed 10-15 min. Netlify proxy
+// has 60s server-side cache. AI brief re-streams every 5 min (expensive).
+var POLL_INTERVAL_MS=60*1000;
+var AI_BRIEF_INTERVAL_MS=5*60*1000;
+var lastAIBriefTime=0;
+
+async function pollLiveData(){
+  var binanceOk=false,fxOk=false,indicesOk=false;
+  try{binanceOk=await fetchCrypto();}catch(e){}
+  try{indicesOk=await fetchIndices();}catch(e){}
+  try{fxOk=await fetchFX();}catch(e){}
+
+  var liveSources=[];
+  if(indicesOk)liveSources.push('indices');
+  if(binanceOk)liveSources.push('crypto');
+  if(fxOk)liveSources.push('FX');
+  var statusEl=document.getElementById('liveStatus');
+  if(statusEl)statusEl.textContent=liveSources.length?('Live: '+liveSources.join(' · ')):'Demo data';
+
+  renderKPIs();
+  if(binanceOk&&charts.crypto){try{charts.crypto.dispose();}catch(e){}renderCryptoChart();}
+  if(fxOk&&charts.fx){try{charts.fx.dispose();}catch(e){}renderFXChart();}
+
+  var now=Date.now();
+  if(now-lastAIBriefTime>AI_BRIEF_INTERVAL_MS){
+    lastAIBriefTime=now;
+    fetchAIBrief();
+  }
+}
+
+function startPolling(){
+  lastAIBriefTime=Date.now();
+  setInterval(pollLiveData,POLL_INTERVAL_MS);
+  document.addEventListener('visibilitychange',function(){
+    if(!document.hidden)pollLiveData();
+  });
+}
+
 boot();
+startPolling();
 window.addEventListener('resize',function(){Object.values(charts).forEach(function(c){if(c)c.resize();});});
 </script>
 </body>
