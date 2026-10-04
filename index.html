@@ -108,41 +108,42 @@ async function fetchCrypto(){
 // ═══ Fetch LIVE FX rates from Frankfurter (via allorigins proxy — Frankfurter
 // doesn't send CORS headers directly, but the proxy adds them) ═══
 async function fetchFX(){
-  try{
-    var furl='https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY,CAD,AUD,CHF,CNY';
-    var proxyUrl='https://api.allorigins.win/raw?url='+encodeURIComponent(furl);
-    var r=await fetch(proxyUrl);
-    if(!r.ok)return false;
-    var d=await r.json();
-    liveData.fxRates=d.rates||{};
-    return true;
-  }catch(e){console.log('Frankfurter failed:',e.message);return false;}
+  var furl='https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY,CAD,AUD,CHF,CNY';
+  var proxyUrl='https://api.allorigins.win/raw?url='+encodeURIComponent(furl);
+  for(var attempt=0;attempt<3;attempt++){
+    try{
+      var r=await fetch(proxyUrl);
+      if(!r.ok){await new Promise(function(r){setTimeout(r,800);});continue;}
+      var d=await r.json();
+      if(!d||!d.rates){await new Promise(function(r){setTimeout(r,800);});continue;}
+      liveData.fxRates=d.rates;
+      return true;
+    }catch(e){await new Promise(function(r){setTimeout(r,800);});}
+  }
+  console.log('Frankfurter failed after 3 retries');
+  return false;
 }
 
-// ═══ Fetch LIVE indices + gold from Yahoo Finance via CORS proxies ═══
-// Yahoo doesn't support CORS directly, so we route through proxies.
-// Primary: allorigins.win. Fallback: corsproxy.io.
-// Requests are SEQUENTIAL (not parallel) with 600ms delay between each
+// ═══ Fetch LIVE indices + gold from Yahoo Finance via allorigins CORS proxy ═══
+// Yahoo doesn't support CORS directly, so we route through allorigins.win.
+// The proxy is flaky so we retry each symbol up to 3 times with 800ms backoff.
+// Requests are SEQUENTIAL (not parallel) with 1500ms delay between symbols
 // to avoid rate-limiting by the proxy.
 async function fetchYahooQuote(symbol){
   var yurl='https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(symbol)+'?interval=1d&range=5d';
-  var proxies=[
-    'https://api.allorigins.win/raw?url='+encodeURIComponent(yurl),
-    'https://corsproxy.io/?url='+encodeURIComponent(yurl),
-    'https://api.codetabs.com/v1/proxy/?quest='+encodeURIComponent(yurl)
-  ];
-  for(var i=0;i<proxies.length;i++){
+  var proxyUrl='https://api.allorigins.win/raw?url='+encodeURIComponent(yurl);
+  for(var attempt=0;attempt<3;attempt++){
     try{
-      var r=await fetch(proxies[i]);
-      if(!r.ok)continue;
+      var r=await fetch(proxyUrl);
+      if(!r.ok){await new Promise(function(r){setTimeout(r,800);});continue;}
       var d=await r.json();
       var meta=d&&d.chart&&d.chart.result&&d.chart.result[0]&&d.chart.result[0].meta;
-      if(!meta)continue;
+      if(!meta){await new Promise(function(r){setTimeout(r,800);});continue;}
       var price=meta.regularMarketPrice;
       var prev=meta.chartPreviousClose||meta.previousClose;
-      if(!price||!prev)continue;
+      if(!price||!prev){await new Promise(function(r){setTimeout(r,800);});continue;}
       return{price:price,change:((price-prev)/prev*100)};
-    }catch(e){/* try next proxy */}
+    }catch(e){await new Promise(function(r){setTimeout(r,800);});}
   }
   return null;
 }
@@ -156,14 +157,14 @@ async function fetchIndices(){
     {key:'gold',symbol:'GC=F'}
   ];
   var anyOk=false;
-  // SEQUENTIAL with 600ms delay to avoid proxy rate-limiting
+  // SEQUENTIAL with 1500ms delay between symbols (proxy is rate-limited)
   for(var i=0;i<symbols.length;i++){
     var result=await fetchYahooQuote(symbols[i].symbol);
     if(result){
       liveData[symbols[i].key]=result;
       anyOk=true;
     }
-    if(i<symbols.length-1)await new Promise(function(r){setTimeout(r,600);});
+    if(i<symbols.length-1)await new Promise(function(r){setTimeout(r,1500);});
   }
   return anyOk;
 }
