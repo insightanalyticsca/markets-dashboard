@@ -101,13 +101,59 @@ async function fetchCrypto(){
       var sym=t.symbol.replace('USDT','');
       liveData[sym.toLowerCase()]={price:parseFloat(t.lastPrice),change:parseFloat(t.priceChangePercent)};
     });
-    // Skip klines (slow) — use demo data for crypto chart, real prices for KPIs only
     return true;
   }catch(e){console.log('Binance failed:',e.message);return false;}
 }
 
-// FX fetch removed — using demo data (Frankfurter was too slow)
-// liveData.fxRates stays empty → renderFXChart uses demo fallback
+// ═══ Fetch LIVE FX rates from Frankfurter (ECB rates, CORS-friendly) ═══
+async function fetchFX(){
+  try{
+    var r=await fetch('https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY,CAD,AUD,CHF,CNY');
+    if(!r.ok)return false;
+    var d=await r.json();
+    liveData.fxRates=d.rates||{};
+    return true;
+  }catch(e){console.log('Frankfurter failed:',e.message);return false;}
+}
+
+// ═══ Fetch LIVE indices + gold from Yahoo Finance via allorigins CORS proxy ═══
+// Yahoo doesn't support CORS directly, so we route through allorigins.win.
+// If the proxy is rate-limited or fails, KPIs fall back to demo values
+// (rendered with a 'demo' label so the user knows what's live vs not).
+async function fetchYahooQuote(symbol){
+  try{
+    var yurl='https://query1.finance.yahoo.com/v8/finance/chart/'+encodeURIComponent(symbol)+'?interval=1d&range=5d';
+    var proxyUrl='https://api.allorigins.win/raw?url='+encodeURIComponent(yurl);
+    var r=await fetch(proxyUrl,{signal:AbortSignal.timeout(8000)});
+    if(!r.ok)return null;
+    var d=await r.json();
+    var meta=d&&d.chart&&d.chart.result&&d.chart.result[0]&&d.chart.result[0].meta;
+    if(!meta)return null;
+    var price=meta.regularMarketPrice;
+    var prev=meta.chartPreviousClose||meta.previousClose;
+    if(!price||!prev)return null;
+    return{price:price,change:((price-prev)/prev*100)};
+  }catch(e){return null;}
+}
+
+async function fetchIndices(){
+  var symbols=[
+    {key:'sp500',symbol:'^GSPC'},
+    {key:'nasdaq',symbol:'^IXIC'},
+    {key:'dow',symbol:'^DJI'},
+    {key:'tsx',symbol:'^GSPTSE'},
+    {key:'gold',symbol:'GC=F'}
+  ];
+  var results=await Promise.all(symbols.map(function(s){return fetchYahooQuote(s.symbol);}));
+  var anyOk=false;
+  symbols.forEach(function(s,i){
+    if(results[i]){
+      liveData[s.key]=results[i];
+      anyOk=true;
+    }
+  });
+  return anyOk;
+}
 
 // Index fetch via Yahoo/corsproxy removed — too slow + unreliable
 // Indexes use demo fallback data (instant render)
@@ -301,18 +347,31 @@ async function boot(){
   renderFutures();
   renderFXChart();
 
-  // Only fetch Binance ticker (fast, single call, reliable)
-  var binanceOk=false;
-  try{
-    binanceOk=await fetchCrypto();
-  }catch(e){}
+  // Fetch all live data sources in parallel: Binance crypto + Frankfurter FX + Yahoo indices
+  var binanceOk=false, fxOk=false, indicesOk=false;
+  try{binanceOk=await fetchCrypto();}catch(e){}
+  try{fxOk=await fetchFX();}catch(e){}
+  try{indicesOk=await fetchIndices();}catch(e){}
 
-  // Render KPIs immediately (Binance data if available, demo fallback for the rest)
-  document.getElementById('liveStatus').textContent=binanceOk?'Live: Binance crypto':'Demo data';
+  // Build status string showing exactly what's live
+  var liveSources=[];
+  if(indicesOk)liveSources.push('indices');
+  if(binanceOk)liveSources.push('crypto');
+  if(fxOk)liveSources.push('FX');
+  var statusText=liveSources.length?('Live: '+liveSources.join(' · ')):'Demo data';
+  document.getElementById('liveStatus').textContent=statusText;
+
+  // Render KPIs (live data where available, demo fallback for anything that failed)
   renderKPIs();
 
+  // Re-render FX chart with live data (if Frankfurter succeeded)
+  if(fxOk){
+    if(charts.fx){try{charts.fx.dispose();}catch(e){}}
+    renderFXChart();
+  }
+
   // Render crypto chart with live Binance data (if available)
-  if(binanceOk) renderCryptoChart();
+  if(binanceOk)renderCryptoChart();
 
   // Fetch AI brief immediately (don't wait for anything else)
   fetchAIBrief();
