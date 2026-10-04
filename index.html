@@ -171,7 +171,7 @@ function renderFXChart(){
       var baseRate=1;
       var chg=((cross-baseRate)/baseRate*100);
       fxData.push([ci2,ci,chg.toFixed(2)]);
-    });});});
+    }});});
     document.getElementById('src-fx').textContent='Frankfurter/ECB';
   }
   charts.fx=echarts.init(document.getElementById('chart-fx'));
@@ -299,6 +299,7 @@ async function boot(){
   renderTrendsChart();
   renderSectors();
   renderFutures();
+  renderFXChart();
 
   // Only fetch Binance ticker (fast, single call, reliable)
   var binanceOk=false;
@@ -309,6 +310,9 @@ async function boot(){
   // Render KPIs immediately (Binance data if available, demo fallback for the rest)
   document.getElementById('liveStatus').textContent=binanceOk?'Live: Binance crypto':'Demo data';
   renderKPIs();
+
+  // Render crypto chart with live Binance data (if available)
+  if(binanceOk) renderCryptoChart();
 
   // Fetch AI brief immediately (don't wait for anything else)
   fetchAIBrief();
