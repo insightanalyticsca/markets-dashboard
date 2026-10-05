@@ -89,7 +89,10 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
 <script>
 var liveData={sp500:null,nasdaq:null,dow:null,tsx:null,btc:null,eth:null,sol:null,gold:null,fxRates:{},cryptoHist:{btc:[],eth:[],sol:[]}};
 var charts={};
-function fmt(n,dec){return Number(n).toLocaleString('en-US',{minimumFractionDigits:dec||2,maximumFractionDigits:dec||2});}
+// All metric cards render in "000.00" format — always 2 decimal places.
+// The `dec` argument is kept for backward-compat with existing call sites
+// but is intentionally ignored so every KPI lines up with 2-decimal display.
+function fmt(n,dec){return Number(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2});}
 function pct(curr,prev){if(!prev)return 0;return((curr-prev)/prev*100);}
 
 // ═══ Fetch LIVE crypto from Binance (fast: single ticker call only) ═══ ═════════════════════════════════════
