@@ -120,12 +120,31 @@ async function fetchFX(){
       var d=await r.json();
       if(d&&d.rates){
         liveData.fxRates=d.rates;
+        // Also fetch yesterday's rates from Frankfurter directly (CORS-enabled)
+        // to compute REAL cross-currency % changes. No demo data.
+        var baseDate=new Date();
+        for(var back=1;back<=5;back++){
+          var prevDate=new Date(baseDate);
+          prevDate.setDate(prevDate.getDate()-back);
+          var dateStr=prevDate.toISOString().split('T')[0];
+          var yUrl='https://api.frankfurter.app/'+dateStr+'?from=USD&to=EUR,GBP,JPY,CAD,AUD,CHF,CNY';
+          try{
+            var r2=await fetch(yUrl);
+            if(!r2.ok)continue;
+            var d2=await r2.json();
+            if(d2&&d2.rates){
+              var allSame=true;
+              for(var k in d2.rates){if(Math.abs((d2.rates[k]||0)-(d.rates[k]||0))>0.0001){allSame=false;break;}}
+              if(!allSame){liveData.fxRatesPrev=d2.rates;break;}
+            }
+          }catch(e){/* try next day back */}
+        }
         return true;
       }
     }
   }catch(e){/* fall through to allorigins */}
 
-  // Fallback: allorigins.win CORS proxy
+  // Fallback: allorigins.win CORS proxy for current rates
   var furl='https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY,CAD,AUD,CHF,CNY';
   var proxyUrl='https://api.allorigins.win/raw?url='+encodeURIComponent(furl);
   for(var attempt=0;attempt<3;attempt++){
@@ -281,29 +300,27 @@ function renderCryptoChart(){
 function renderFXChart(){
   var curr=['EUR','GBP','JPY','CAD','AUD','CHF','CNY'];
   var fxData=[];
-  var rates=liveData.fxRates;
-  if(Object.keys(rates).length===0){
-    // Demo fallback — include diagonal cells with explicit itemStyle.color
-    // (visualMap doesn't color value-0 cells, so we set the slate midpoint
-    // color directly to match the off-diagonal near-0 cells).
-    curr.forEach(function(c,ci){curr.forEach(function(c2,ci2){
-      if(ci===ci2){fxData.push({value:[ci2,ci,0],itemStyle:{color:'rgba(30,41,59,0.78)'}});}
-      else{fxData.push([ci2,ci,(Math.random()*3-1.5).toFixed(2)]);}
-    });});
-    document.getElementById('src-fx').textContent='demo';
-  }else{
-    // Include diagonal cells with explicit itemStyle.color — see above.
-    curr.forEach(function(c,ci){curr.forEach(function(c2,ci2){
-      if(ci===ci2){fxData.push({value:[ci2,ci,0],itemStyle:{color:'rgba(30,41,59,0.78)'}});}
-      else{
-      var r1=rates[c]||1;var r2=rates[c2]||1;
-      var cross=(1/r1)/(1/r2);
-      var baseRate=1;
-      var chg=((cross-baseRate)/baseRate*100);
-      fxData.push([ci2,ci,chg.toFixed(2)]);
-    }});});
-    document.getElementById('src-fx').textContent='Frankfurter/ECB';
-  }
+  var rates=liveData.fxRates||{};
+  var ratesPrev=liveData.fxRatesPrev||{};
+  var hasLive=Object.keys(rates).length>0&&Object.keys(ratesPrev).length>0;
+  // Live cross-currency % changes computed from today's vs yesterday's
+  // Frankfurter rates. NO demo data — if rates aren't available, cells
+  // show "—" with the chart background color (no fake random values).
+  curr.forEach(function(c,ci){curr.forEach(function(c2,ci2){
+    if(ci===ci2){
+      fxData.push({value:[ci2,ci,0],itemStyle:{color:'rgba(30,41,59,0.78)'}});
+    }else if(hasLive){
+      var r1today=rates[c]||1;var r2today=rates[c2]||1;
+      var r1prev=ratesPrev[c]||r1today;var r2prev=ratesPrev[c2]||r2today;
+      var crossToday=r2today/r1today;
+      var crossPrev=r2prev/r1prev;
+      var chg=((crossToday-crossPrev)/crossPrev)*100;
+      fxData.push([ci2,ci,parseFloat(chg.toFixed(2))]);
+    }else{
+      fxData.push({value:[ci2,ci,null],itemStyle:{color:'rgba(15,23,42,0.92)'}});
+    }
+  });});
+  document.getElementById('src-fx').textContent=hasLive?'Frankfurter/ECB live':'rate fetch failed';
   charts.fx=echarts.init(document.getElementById('chart-fx'));
   charts.fx.setOption({
     // Match chart-card dark slate bg so empty diagonal cells blend in.
@@ -325,7 +342,7 @@ function renderFXChart(){
     series:[{
       type:'heatmap',
       data:fxData,
-      label:{show:true,fontSize:9,fontWeight:700,color:'#e2e8f0',textShadowColor:'rgba(0,0,0,0.55)',textShadowBlur:2,formatter:function(p){if(p.value[0]===p.value[1])return '—';return p.value[2];}},
+      label:{show:true,fontSize:9,fontWeight:700,color:'#e2e8f0',textShadowColor:'rgba(0,0,0,0.55)',textShadowBlur:2,formatter:function(p){if(p.value[0]===p.value[1])return '—';if(p.value[2]===null||p.value[2]===undefined)return '—';return p.value[2];}},
       itemStyle:{borderRadius:6,borderColor:'transparent',borderWidth:0,shadowBlur:8,shadowColor:'rgba(0,0,0,0.32)',opacity:0.78},
       emphasis:{itemStyle:{shadowBlur:20,shadowColor:'rgba(6,182,212,0.75)',borderColor:'rgba(6,182,212,0.9)',borderWidth:2,opacity:1}}
     }]
