@@ -321,7 +321,7 @@ function renderFXChart(){
     splitLine:{show:false},
     xAxis:{type:'category',data:curr,axisLabel:{color:'#cbd5e1',fontSize:10,fontWeight:600,margin:10},axisLine:{show:false},axisTick:{show:false},splitArea:{show:false}},
     yAxis:{type:'category',data:curr,axisLabel:{color:'#cbd5e1',fontSize:10,fontWeight:600,margin:10},axisLine:{show:false},axisTick:{show:false},splitArea:{show:false}},
-    visualMap:{min:-1.5,max:1.5,calculable:false,show:false,inRange:{color:['#be123c','#fb923c','#fbbf24','#1e293b','#34d399','#10b981','#047857']}},
+    visualMap:{min:-1.5,max:1.5,calculable:false,show:false,inRange:{color:['#be123c','#fb923c','#fbbf24','#1e293b','#34d399','#10b981','#047857']},outOfRange:{color:'rgba(15,23,42,0.92)'}},
     series:[{
       type:'heatmap',
       data:fxData,
