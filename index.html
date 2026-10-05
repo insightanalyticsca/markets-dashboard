@@ -283,18 +283,18 @@ function renderFXChart(){
   var fxData=[];
   var rates=liveData.fxRates;
   if(Object.keys(rates).length===0){
-    // Demo fallback — include diagonal cells with value 0 so the visualMap
-    // renders them as the neutral slate color (was leaving them empty/
-    // whitish, showing as a "horizontal band" across the matrix middle).
+    // Demo fallback — include diagonal cells with explicit itemStyle.color
+    // (visualMap doesn't color value-0 cells, so we set the slate midpoint
+    // color directly to match the off-diagonal near-0 cells).
     curr.forEach(function(c,ci){curr.forEach(function(c2,ci2){
-      if(ci===ci2){fxData.push([ci2,ci,0.0001]);}
+      if(ci===ci2){fxData.push({value:[ci2,ci,0],itemStyle:{color:'rgba(30,41,59,0.78)'}});}
       else{fxData.push([ci2,ci,(Math.random()*3-1.5).toFixed(2)]);}
     });});
     document.getElementById('src-fx').textContent='demo';
   }else{
-    // Include diagonal cells with value 0 — see demo fallback comment above.
+    // Include diagonal cells with explicit itemStyle.color — see above.
     curr.forEach(function(c,ci){curr.forEach(function(c2,ci2){
-      if(ci===ci2){fxData.push([ci2,ci,0.0001]);}
+      if(ci===ci2){fxData.push({value:[ci2,ci,0],itemStyle:{color:'rgba(30,41,59,0.78)'}});}
       else{
       var r1=rates[c]||1;var r2=rates[c2]||1;
       var cross=(1/r1)/(1/r2);
