@@ -492,7 +492,18 @@ function startPolling(){
 
 boot();
 startPolling();
-window.addEventListener('resize',function(){Object.values(charts).forEach(function(c){if(c)c.resize();});});
+
+// ─── Robust first-load chart resize ───────────────────────────────────
+// ECharts canvases render at the INITIAL container size, which may be
+// squished if the CSS grid hasn't settled yet, or after webfont swap
+// changes title dimensions. Cover all the timing paths that leave charts
+// squished on initial render:
+function resizeAllCharts(){Object.values(charts).forEach(function(c){try{if(c)c.resize();}catch(e){}});}
+requestAnimationFrame(function(){resizeAllCharts();requestAnimationFrame(function(){resizeAllCharts();setTimeout(resizeAllCharts,100);setTimeout(resizeAllCharts,300);});});
+window.addEventListener('resize',function(){resizeAllCharts();});
+window.addEventListener('load',function(){resizeAllCharts();setTimeout(resizeAllCharts,200);setTimeout(resizeAllCharts,600);});
+if(document.fonts&&document.fonts.ready){document.fonts.ready.then(function(){resizeAllCharts();setTimeout(resizeAllCharts,100);});}
+if(typeof ResizeObserver!=='undefined'){var ro=new ResizeObserver(function(){if(ro._raf)cancelAnimationFrame(ro._raf);ro._raf=requestAnimationFrame(function(){ro._raf=null;resizeAllCharts();});});Object.values(charts).forEach(function(c){if(c&&c.getDom){var d=c.getDom();if(d)ro.observe(d);}});}
 </script>
 </body>
 </html>
