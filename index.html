@@ -71,7 +71,7 @@ body{font-family:var(--fb);background:var(--bg);color:var(--text);min-height:100
 <div class="chart-grid">
 <div class="chart-card wide"><div class="chart-title"><i class="fas fa-chart-line"></i> Index & Crypto Trends <span class="src" id="src-trends">loading…</span></div><div class="chart-body tall" id="chart-trends"></div></div>
 <div class="chart-card"><div class="chart-title"><i class="fas fa-th"></i> Sector Performance <span class="src">computed</span></div><div class="chart-body" id="chart-sectors"></div></div>
-<div class="chart-card"><div class="chart-title"><i class="fas fa-coins"></i> Crypto Comparison <span class="src">Binance API</span></div><div class="chart-body" id="chart-crypto"></div></div>
+<div class="chart-card"><div class="chart-title"><i class="fas fa-coins"></i> Crypto Comparison <span class="src" id="src-crypto">Binance API</span></div><div class="chart-body" id="chart-crypto"></div></div>
 <div class="chart-card"><div class="chart-title"><i class="fas fa-oil-can"></i> Futures Curve <span class="src">computed</span></div><div class="chart-body" id="chart-futures"></div></div>
 <div class="chart-card"><div class="chart-title"><i class="fas fa-globe"></i> Currency Heatmap <span class="src" id="src-fx">loading…</span></div><div class="chart-body" id="chart-fx"></div></div>
 </div>
@@ -260,7 +260,7 @@ function renderCryptoChart(){
   });
 
   if(!series.length){
-    document.getElementById('src-crypto').textContent='waiting for Binance…';
+    var sc=document.getElementById('src-crypto');if(sc)sc.textContent='waiting for Binance…';
     return;
   }
   charts.crypto.setOption({
@@ -272,7 +272,7 @@ function renderCryptoChart(){
     yAxis:{type:'value',axisLabel:{color:'#64748b',fontSize:9}},
     series:series
   });
-  document.getElementById('src-crypto').textContent='Binance live';
+  var sc2=document.getElementById('src-crypto');if(sc2)sc2.textContent='Binance live';
 }
 
 // ═══ Render FX heatmap (live Frankfurter data) ═════════════════════════
