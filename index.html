@@ -287,14 +287,14 @@ function renderFXChart(){
     // renders them as the neutral slate color (was leaving them empty/
     // whitish, showing as a "horizontal band" across the matrix middle).
     curr.forEach(function(c,ci){curr.forEach(function(c2,ci2){
-      if(ci===ci2){fxData.push([ci2,ci,0]);}
+      if(ci===ci2){fxData.push([ci2,ci,0.0001]);}
       else{fxData.push([ci2,ci,(Math.random()*3-1.5).toFixed(2)]);}
     });});
     document.getElementById('src-fx').textContent='demo';
   }else{
     // Include diagonal cells with value 0 — see demo fallback comment above.
     curr.forEach(function(c,ci){curr.forEach(function(c2,ci2){
-      if(ci===ci2){fxData.push([ci2,ci,0]);}
+      if(ci===ci2){fxData.push([ci2,ci,0.0001]);}
       else{
       var r1=rates[c]||1;var r2=rates[c2]||1;
       var cross=(1/r1)/(1/r2);
