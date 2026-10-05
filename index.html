@@ -268,8 +268,10 @@ function renderCryptoChart(){
     tooltip:{trigger:'axis'},
     legend:{data:series.map(function(s){return s.name;}),textStyle:{color:'#94a3b8',fontSize:10},top:0},
     grid:{left:55,right:20,top:30,bottom:30},
-    xAxis:{type:'category',data:dates,axisLabel:{color:'#64748b',fontSize:8,interval:9}},
-    yAxis:{type:'value',axisLabel:{color:'#64748b',fontSize:9}},
+    xAxis:{type:'category',data:dates,axisLabel:{color:'#cbd5e1',fontSize:8,interval:9},axisLine:{lineStyle:{color:'rgba(99,102,241,.1)'}},axisTick:{show:false},splitLine:{show:false}},
+    // Explicit splitLine styling — without it, ECharts uses thick white
+    // horizontal grid lines that show prominently in dark theme.
+    yAxis:{type:'value',axisLabel:{color:'#cbd5e1',fontSize:9},splitLine:{lineStyle:{color:'rgba(99,102,241,.08)',type:'dashed'}},axisLine:{show:false},axisTick:{show:false}},
     series:series
   });
   var sc2=document.getElementById('src-crypto');if(sc2)sc2.textContent='Binance live';
@@ -347,8 +349,14 @@ function renderTrendsChart(){
     tooltip:{trigger:'axis',axisPointer:{type:'cross'}},
     legend:{data:['S&P 500','NASDAQ','Volume (B)'].concat(btcSeries?['BTC ($)']:[]),textStyle:{color:'#94a3b8',fontSize:10},top:0},
     grid:{left:60,right:70,top:30,bottom:30},
-    xAxis:{type:'category',data:days,axisLabel:{color:'#64748b',fontSize:9,rotate:45}},
-    yAxis:[{type:'value',position:'left',axisLabel:{color:'#64748b',fontSize:9}},{type:'value',position:'right',axisLabel:{color:'#64748b',fontSize:9},name:'BTC $',nameTextStyle:{color:'#f59e0b',fontSize:9}}],
+    xAxis:{type:'category',data:days,axisLabel:{color:'#cbd5e1',fontSize:9,rotate:45},axisLine:{lineStyle:{color:'rgba(99,102,241,.1)'}},axisTick:{show:false},splitLine:{show:false}},
+    // Dual yAxis: left = S&P/NASDAQ/Volume, right = BTC. Both need explicit
+    // splitLine config — without it, ECharts falls back to thick solid white
+    // horizontal grid lines that show prominently in dark theme.
+    yAxis:[
+      {type:'value',position:'left',axisLabel:{color:'#cbd5e1',fontSize:9},splitLine:{lineStyle:{color:'rgba(99,102,241,.08)',type:'dashed'}},axisLine:{show:false},axisTick:{show:false}},
+      {type:'value',position:'right',axisLabel:{color:'#cbd5e1',fontSize:9},name:'BTC $',nameTextStyle:{color:'#f59e0b',fontSize:9},splitLine:{show:false},axisLine:{show:false},axisTick:{show:false}}
+    ],
     series:series
   });
 }
@@ -393,8 +401,10 @@ function renderFutures(){
     backgroundColor:'transparent',
     tooltip:{trigger:'axis'},
     grid:{left:50,right:20,top:20,bottom:30},
-    xAxis:{type:'category',data:['Crude Oil','Nat Gas','Gold','Silver','Copper','Wheat','Corn','Soybean'],axisLabel:{color:'#94a3b8',fontSize:9,rotate:30}},
-    yAxis:{type:'value',axisLabel:{color:'#64748b',fontSize:9}},
+    xAxis:{type:'category',data:['Crude Oil','Nat Gas','Gold','Silver','Copper','Wheat','Corn','Soybean'],axisLabel:{color:'#cbd5e1',fontSize:9,rotate:30},axisLine:{lineStyle:{color:'rgba(99,102,241,.1)'}},axisTick:{show:false},splitLine:{show:false}},
+    // Hide y-axis splitLines on the bar chart — they were showing as thick
+    // white grid lines in dark theme and competing with the bar colors.
+    yAxis:{type:'value',axisLabel:{color:'#cbd5e1',fontSize:9},splitLine:{show:false},axisLine:{show:false},axisTick:{show:false}},
     series:[{type:'bar',data:[{value:71.85,itemStyle:{color:'#ef4444'}},{value:2.74,itemStyle:{color:'#f59e0b'}},{value:2671.50,itemStyle:{color:'#06b6d4'}},{value:31.42,itemStyle:{color:'#94a3b8'}},{value:4.33,itemStyle:{color:'#8b5cf6'}},{value:5.71,itemStyle:{color:'#10b981'}},{value:4.18,itemStyle:{color:'#f59e0b'}},{value:9.87,itemStyle:{color:'#6366f1'}}],barWidth:'60%',label:{show:true,position:'top',color:'#94a3b8',fontSize:9,formatter:function(p){return'$'+p.value;}}}]
   });
 }
