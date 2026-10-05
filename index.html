@@ -127,7 +127,7 @@ async function fetchFX(){
           var prevDate=new Date(baseDate);
           prevDate.setDate(prevDate.getDate()-back);
           var dateStr=prevDate.toISOString().split('T')[0];
-          var yUrl='https://api.frankfurter.app/'+dateStr+'?from=USD&to=EUR,GBP,JPY,CAD,AUD,CHF,CNY';
+          var yUrl='https://api.frankfurter.dev/v1/'+dateStr+'?from=USD&to=EUR,GBP,JPY,CAD,AUD,CHF,CNY';
           try{
             var r2=await fetch(yUrl);
             if(!r2.ok)continue;
@@ -139,13 +139,33 @@ async function fetchFX(){
             }
           }catch(e){/* try next day back */}
         }
+        // FALLBACK: If Frankfurter historical failed, fetch Yahoo currency pair
+        // quotes (USD-based) via Netlify proxy for direct % changes.
+        if(!liveData.fxRatesPrev){
+          try{
+            var fxSymbols='EURUSD%3DX,GBPUSD%3DX,JPYUSD%3DX,CADUSD%3DX,AUDUSD%3DX,CHFUSD%3DX,CNYUSD%3DX';
+            var r3=await fetch(MARKETS_PROXY+'?symbols='+fxSymbols);
+            if(r3.ok){
+              var d3=await r3.json();
+              if(d3&&d3.quotes){
+                var fxPct={};
+                var symKey={'EURUSD':'EUR','GBPUSD':'GBP','JPYUSD':'JPY','CADUSD':'CAD','AUDUSD':'AUD','CHFUSD':'CHF','CNYUSD':'CNY'};
+                d3.quotes.forEach(function(q){
+                  var baseSym=q.symbol.replace('USD=X','').replace('=X','');
+                  if(symKey[baseSym]&&q.changePct!=null){fxPct[symKey[baseSym]]=q.changePct;}
+                });
+                if(Object.keys(fxPct).length>0){liveData.fxDirectPct=fxPct;}
+              }
+            }
+          }catch(e){/* Yahoo fallback failed too */}
+        }
         return true;
       }
     }
   }catch(e){/* fall through to allorigins */}
 
   // Fallback: allorigins.win CORS proxy for current rates
-  var furl='https://api.frankfurter.app/latest?from=USD&to=EUR,GBP,JPY,CAD,AUD,CHF,CNY';
+  var furl='https://api.frankfurter.dev/v1/latest?from=USD&to=EUR,GBP,JPY,CAD,AUD,CHF,CNY';
   var proxyUrl='https://api.allorigins.win/raw?url='+encodeURIComponent(furl);
   for(var attempt=0;attempt<3;attempt++){
     try{
@@ -302,25 +322,33 @@ function renderFXChart(){
   var fxData=[];
   var rates=liveData.fxRates||{};
   var ratesPrev=liveData.fxRatesPrev||{};
-  var hasLive=Object.keys(rates).length>0&&Object.keys(ratesPrev).length>0;
-  // Live cross-currency % changes computed from today's vs yesterday's
-  // Frankfurter rates. NO demo data — if rates aren't available, cells
-  // show "—" with the chart background color (no fake random values).
+  var directPct=liveData.fxDirectPct||{};
+  var hasFrankfurter=Object.keys(rates).length>0&&Object.keys(ratesPrev).length>0;
+  var hasYahoo=Object.keys(directPct).length>0;
+  // Live cross-currency % changes. Priority:
+  //   1. Frankfurter historical (today vs yesterday) — most accurate
+  //   2. Yahoo currency pair quotes (via Netlify proxy) — direct % changes
+  //   3. If both fail, show "—" (no demo data, no empty matrix)
   curr.forEach(function(c,ci){curr.forEach(function(c2,ci2){
     if(ci===ci2){
       fxData.push({value:[ci2,ci,0],itemStyle:{color:'rgba(30,41,59,0.78)'}});
-    }else if(hasLive){
+    }else if(hasFrankfurter){
       var r1today=rates[c]||1;var r2today=rates[c2]||1;
       var r1prev=ratesPrev[c]||r1today;var r2prev=ratesPrev[c2]||r2today;
       var crossToday=r2today/r1today;
       var crossPrev=r2prev/r1prev;
       var chg=((crossToday-crossPrev)/crossPrev)*100;
       fxData.push([ci2,ci,parseFloat(chg.toFixed(2))]);
+    }else if(hasYahoo){
+      var pct1=directPct[c]||0;var pct2=directPct[c2]||0;
+      var crossChg=pct1-pct2;
+      fxData.push([ci2,ci,parseFloat(crossChg.toFixed(2))]);
     }else{
       fxData.push({value:[ci2,ci,null],itemStyle:{color:'rgba(15,23,42,0.92)'}});
     }
   });});
-  document.getElementById('src-fx').textContent=hasLive?'Frankfurter/ECB live':'rate fetch failed';
+  var srcFx=document.getElementById('src-fx');
+  if(srcFx){srcFx.textContent=hasFrankfurter?'Frankfurter/ECB live':(hasYahoo?'Yahoo Finance live':'rate fetch failed');}
   charts.fx=echarts.init(document.getElementById('chart-fx'));
   charts.fx.setOption({
     // Match chart-card dark slate bg so empty diagonal cells blend in.
