@@ -283,11 +283,19 @@ function renderFXChart(){
   var fxData=[];
   var rates=liveData.fxRates;
   if(Object.keys(rates).length===0){
-    // Demo fallback
-    curr.forEach(function(c,ci){curr.forEach(function(c2,ci2){if(ci!==ci2)fxData.push([ci2,ci,(Math.random()*3-1.5).toFixed(2)]);});});
+    // Demo fallback — include diagonal cells with value 0 so the visualMap
+    // renders them as the neutral slate color (was leaving them empty/
+    // whitish, showing as a "horizontal band" across the matrix middle).
+    curr.forEach(function(c,ci){curr.forEach(function(c2,ci2){
+      if(ci===ci2){fxData.push([ci2,ci,0]);}
+      else{fxData.push([ci2,ci,(Math.random()*3-1.5).toFixed(2)]);}
+    });});
     document.getElementById('src-fx').textContent='demo';
   }else{
-    curr.forEach(function(c,ci){curr.forEach(function(c2,ci2){if(ci!==ci2){
+    // Include diagonal cells with value 0 — see demo fallback comment above.
+    curr.forEach(function(c,ci){curr.forEach(function(c2,ci2){
+      if(ci===ci2){fxData.push([ci2,ci,0]);}
+      else{
       var r1=rates[c]||1;var r2=rates[c2]||1;
       var cross=(1/r1)/(1/r2);
       var baseRate=1;
@@ -316,7 +324,7 @@ function renderFXChart(){
     series:[{
       type:'heatmap',
       data:fxData,
-      label:{show:true,fontSize:9,fontWeight:700,color:'#e2e8f0',textShadowColor:'rgba(0,0,0,0.55)',textShadowBlur:2,formatter:function(p){return p.value[2];}},
+      label:{show:true,fontSize:9,fontWeight:700,color:'#e2e8f0',textShadowColor:'rgba(0,0,0,0.55)',textShadowBlur:2,formatter:function(p){if(p.value[0]===p.value[1])return '—';return p.value[2];}},
       itemStyle:{borderRadius:6,borderColor:'transparent',borderWidth:0,shadowBlur:8,shadowColor:'rgba(0,0,0,0.32)',opacity:0.78},
       emphasis:{itemStyle:{shadowBlur:20,shadowColor:'rgba(6,182,212,0.75)',borderColor:'rgba(6,182,212,0.9)',borderWidth:2,opacity:1}}
     }]
