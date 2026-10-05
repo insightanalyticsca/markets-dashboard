@@ -360,7 +360,7 @@ function renderFXChart(){
       padding:[8,12],
       textStyle:{color:'#e2e8f0',fontSize:11,fontFamily:'Inter, sans-serif'},
       extraCssText:'backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-radius:10px;box-shadow:0 8px 24px -8px rgba(0,0,0,.5);',
-      formatter:function(p){return '<b style="color:#fff">'+curr[p.value[1]]+'/'+curr[p.value[0]]+'</b><br><b style="color:#06b6d4">'+p.value[2]+'%</b>';}
+      formatter:function(p){return '<b style="color:#fff">'+curr[p.value[1]]+'/'+curr[p.value[0]]+'</b><br><b style="color:#06b6d4">'+(p.value[2]===null||p.value[2]===undefined?'—':Number(p.value[2]).toFixed(2)+'%')+'</b>';}
     },
     grid:{left:56,right:22,top:14,bottom:32,containLabel:false},
     splitLine:{show:false},
@@ -370,7 +370,7 @@ function renderFXChart(){
     series:[{
       type:'heatmap',
       data:fxData,
-      label:{show:true,fontSize:9,fontWeight:700,color:'#e2e8f0',textShadowColor:'rgba(0,0,0,0.55)',textShadowBlur:2,formatter:function(p){if(p.value[0]===p.value[1])return '—';if(p.value[2]===null||p.value[2]===undefined)return '—';return p.value[2];}},
+      label:{show:true,fontSize:9,fontWeight:700,color:'#e2e8f0',textShadowColor:'rgba(0,0,0,0.55)',textShadowBlur:2,formatter:function(p){if(p.value[0]===p.value[1])return '—';if(p.value[2]===null||p.value[2]===undefined)return '—';return Number(p.value[2]).toFixed(2);}},
       itemStyle:{borderRadius:6,borderColor:'transparent',borderWidth:0,shadowBlur:8,shadowColor:'rgba(0,0,0,0.32)',opacity:0.78},
       emphasis:{itemStyle:{shadowBlur:20,shadowColor:'rgba(6,182,212,0.75)',borderColor:'rgba(6,182,212,0.9)',borderWidth:2,opacity:1}}
     }]
@@ -441,7 +441,7 @@ function renderSectors(){
     series:[{
       type:'heatmap',
       data:heatData,
-      label:{show:true,fontSize:11,fontWeight:700,color:'#ffffff',textShadowColor:'rgba(0,0,0,0.55)',textShadowBlur:3,formatter:function(p){return p.value[2]+'%';}},
+      label:{show:true,fontSize:11,fontWeight:700,color:'#ffffff',textShadowColor:'rgba(0,0,0,0.55)',textShadowBlur:3,formatter:function(p){return Number(p.value[2]).toFixed(2)+'%';}},
       itemStyle:{borderRadius:8,borderColor:'transparent',borderWidth:0,shadowBlur:10,shadowColor:'rgba(0,0,0,0.32)',opacity:0.78},
       emphasis:{itemStyle:{shadowBlur:20,shadowColor:'rgba(99,102,241,0.75)',borderColor:'rgba(99,102,241,0.9)',borderWidth:2,opacity:1},label:{fontSize:12,fontWeight:800}}
     }]
